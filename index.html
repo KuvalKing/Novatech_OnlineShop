@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NovaTech Products</title>
+<style>
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:#0a0d14;color:#e5e7eb;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;min-height:100vh}
+header{position:sticky;top:0;z-index:5;background:#0b1020;border-bottom:1px solid #161d2b;padding-top:env(safe-area-inset-top,0px)}
+.bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 20px;max-width:1200px;margin:0 auto}
+.brand{flex:1;min-width:150px;text-decoration:none;color:inherit}
+.logo{font-weight:800;font-size:22px;letter-spacing:.06em;color:#fff}
+.logo b{color:#22d3ee}
+.tagline{display:block;font-size:10px;letter-spacing:.22em;color:#94a3b8}
+#search{flex:1;min-width:160px;padding:10px 12px;border-radius:8px;border:1px solid #1f2937;background:#111827;color:#e5e7eb;font:inherit}
+.homebtn{display:inline-block;background:linear-gradient(90deg,#22d3ee,#7c3aed);color:#fff;font-weight:600;font-size:15px;padding:9px 18px;border-radius:8px;text-decoration:none}
+.homebtn:hover{opacity:.9}
+main{max-width:1200px;margin:0 auto;padding:28px 20px 100px}
+h1,h2{margin:0 0 14px;font-weight:700}
+h1{font-size:clamp(30px,4vw,44px)}
+h2{font-size:24px}
+.tag{font-size:11px;color:#22d3ee;text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+.center{text-align:center;padding:40px 0 10px}
+.center p{color:#94a3b8;margin:0 0 30px}
+.choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;max-width:640px;margin:0 auto}
+.pick{display:flex;flex-direction:column;gap:6px;align-items:center;background:#111827;border:1px solid #1f2937;border-radius:16px;padding:40px 20px;color:#e5e7eb;text-decoration:none}
+.pick:hover{border-color:#22d3ee}
+.pick strong{font-size:22px}
+.pick span:last-child{color:#94a3b8;font-size:14px}
+.pickIcon{font-size:34px}
+.panel{max-width:420px;margin:40px auto;background:#111827;border:1px solid #1f2937;border-radius:14px;padding:26px;display:flex;flex-direction:column;gap:12px}
+.panel p{margin:0;color:#94a3b8;font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
+.card{position:relative;cursor:pointer;background:#111827;border:1px solid #1f2937;border-radius:12px;overflow:hidden;transition:border-color .2s}
+.card:hover{border-color:#22d3ee66}
+.card img,.noimg{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:#0f172a}
+.cb{padding:12px 14px}
+.cb h3{margin:4px 0 0;font-size:16px;font-weight:600}
+.badge{position:absolute;top:10px;right:10px;background:#f59e0b;color:#111;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px}
+.price{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:6px}
+.price strong{font-size:18px;color:#fff}
+.price s{color:#64748b;font-size:14px}
+.off{font-size:12px;color:#4ade80;font-weight:600}
+.msg{color:#94a3b8;text-align:center;padding:40px 12px;font-size:15px}
+.msg a,.note a{color:#22d3ee}
+.back{display:inline-block;color:#22d3ee;margin-bottom:22px;font-size:15px;text-decoration:none}
+.detail{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:36px;align-items:start}
+#dImg{width:100%;border-radius:14px;background:#0f172a;border:1px solid #1f2937}
+.dInfo h1{font-size:clamp(28px,4vw,40px);margin:10px 0 14px}
+.dInfo p{color:#94a3b8;white-space:pre-line;margin:0 0 20px;font-size:16px}
+.btn{display:inline-block;padding:13px 26px;border-radius:10px;background:linear-gradient(90deg,#22d3ee,#7c3aed);color:#fff;font-weight:600;font-size:16px;border:0;cursor:pointer;text-decoration:none;font-family:inherit;text-align:center}
+.btn:disabled{opacity:.6;cursor:default}
+.btn.small{padding:10px 16px;font-size:14px}
+.ghost{background:transparent;color:#e5e7eb;border:1px solid #334155}
+.warn{background:#7f1d1d;color:#fecaca;padding:9px 14px;font-size:14px}
+.row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
+.between{justify-content:space-between;align-items:center;margin-bottom:14px}
+.list{display:flex;flex-direction:column;gap:10px}
+.item{display:flex;align-items:center;gap:14px;background:#111827;border:1px solid #1f2937;border-radius:10px;padding:10px}
+.thumb{width:56px;height:56px;border-radius:8px;object-fit:cover;background:#0f172a;flex:none}
+.item .info{flex:1;min-width:0}
+.item small{display:block;color:#64748b;word-break:break-all;font-size:12px}
+.fab{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom,0px));width:60px;height:60px;border-radius:50%;border:0;background:linear-gradient(135deg,#22d3ee,#7c3aed);color:#fff;font-size:34px;line-height:1;cursor:pointer;box-shadow:0 8px 24px rgba(34,211,238,.3);z-index:6}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+.modal.open{display:flex}
+.sheet{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:22px;width:100%;max-width:480px;max-height:90vh;overflow:auto;display:flex;flex-direction:column;gap:12px}
+label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:#94a3b8}
+label.check{flex-direction:row;align-items:center;gap:8px;color:#e5e7eb}
+input,textarea{font:inherit;padding:10px 11px;border:1px solid #1f2937;border-radius:8px;background:#0a0d14;color:#e5e7eb}
+input[type=checkbox]{width:18px;height:18px;padding:0}
+textarea{min-height:90px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.prev{width:100%;max-height:200px;object-fit:contain;border-radius:8px;background:#0f172a}
+.err{color:#f87171;font-size:13px;min-height:1em}
+@media (max-width:760px){.detail{grid-template-columns:1fr}.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <a href="#" class="brand"><div class="logo">NOVA<b>TECH</b></div><span class="tagline">AI • AUTOMATION • INNOVATION</span></a>
+    <input id="search" type="search" placeholder="Search products" aria-label="Search products" hidden>
+    <a href="#" class="homebtn">Home</a>
+  </div>
+</header>
+
+<main>
+  <section id="home">
+    <div class="center">
+      <h1>Who are you?</h1>
+      <p>Choose Client to browse products, or Editor to manage them.</p>
+      <div class="choices">
+        <a class="pick" href="#client"><span class="pickIcon">🛍️</span><strong>Client</strong><span>Browse products</span></a>
+        <a class="pick" href="#editor"><span class="pickIcon">✏️</span><strong>Editor</strong><span>Add and manage products</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section id="verify" hidden>
+    <div class="panel">
+      <strong style="font-size:18px">Verify yourself</strong>
+      <p>Type the editor password to open the editor.</p>
+      <input id="pw" type="password" placeholder="Password" autocomplete="current-password" aria-label="Password">
+      <div class="err" id="pwErr"></div>
+      <button class="btn" id="pwBtn">Continue</button>
+    </div>
+  </section>
+
+  <section id="store" hidden>
+    <h2>Products</h2>
+    <div id="grid" class="grid"></div>
+    <p id="msg" class="msg"></p>
+  </section>
+
+  <section id="detail" hidden>
+    <a href="#" class="back" id="back">← Back to products</a>
+    <div class="detail">
+      <img id="dImg" alt="">
+      <div class="dInfo">
+        <span class="tag" id="dType"></span>
+        <h1 id="dName"></h1>
+        <p id="dDesc"></p>
+        <div id="dPrice"></div>
+        <a class="btn" id="dVisit" target="_blank" rel="noopener noreferrer" style="margin-top:22px">Visit site</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="admin" hidden>
+    <div class="row between">
+      <h2>Editor <span class="tag" id="count">(0)</span></h2>
+      <button class="btn small ghost" id="lockBtn">Lock</button>
+    </div>
+    <p class="note" id="localNote" style="color:#94a3b8;font-size:13px;margin:0 0 14px" hidden>This copy saves products in this browser only. The published NovaTech link stores products for everyone.</p>
+    <div id="adminList" class="list"></div>
+    <p class="msg" id="adminEmpty" hidden>No products yet. Tap + to add one.</p>
+  </section>
+</main>
+
+<button class="fab" id="addBtn" aria-label="Add product" hidden>+</button>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <strong style="font-size:18px">Add product</strong>
+    <label>Photo<input id="pImg" type="file" accept="image/*"></label>
+    <img id="pPrev" class="prev" alt="" hidden>
+    <label>Name<input id="pName" maxlength="120"></label>
+    <label>Type of product<input id="pType" placeholder="e.g. Finance, Food, Services"></label>
+    <label>Link (URL)<input id="pUrl" placeholder="https://yourwebsite.com" inputmode="url"></label>
+    <label>Description<textarea id="pDesc" maxlength="1000"></textarea></label>
+    <div class="two">
+      <label>Price (₹, optional)<input id="pPrice" inputmode="decimal"></label>
+      <label>Discounted price (₹, optional)<input id="pDisc" inputmode="decimal"></label>
+    </div>
+    <label class="check"><input id="pSpecial" type="checkbox"> Special product (shown first)</label>
+    <div class="err" id="pErr"></div>
+    <div class="row"><button class="btn ghost" id="cancelBtn">Cancel</button><button class="btn" id="saveBtn">Save product</button></div>
+  </div>
+</div>
+
+<script>
+const PASS_HASH = '30a0e201b3c95ca6c1ef63112450e1951c0982ffaafe749db3e6732fdd1ff388';
+const LOCAL_KEY = 'novatech-products';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeImg = s => /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(s || '') ? s : '';
+const normUrl = u => {
+  u = (u || '').trim();
+  if (!u) return '';
+  if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+  try { const x = new URL(u); return /^https?:$/.test(x.protocol) ? x.href : ''; } catch (e) { return ''; }
+};
+const num = s => { const v = parseFloat(String(s).replace(/,/g, '')); return isFinite(v) && v >= 0 ? v : null; };
+const sortProducts = (a, b) => (Number(!!b.special) - Number(!!a.special)) || ((b.createdAt || 0) - (a.createdAt || 0));
+const signInLink = 'Sign in to Claude: <a href="https://claude.ai/login" target="_blank" rel="noopener noreferrer">open sign-in</a>, then reload this page.';
+
+let db = null, productsRef = null, subscribed = false, prods = [], query = '', pendingFile = null, unlocked = false, localMode = false;
+
+function showSection(name) {
+  ['home', 'store', 'detail', 'verify', 'admin'].forEach(s => { $(s).hidden = s !== name; });
+  $('search').hidden = name !== 'store';
+  $('addBtn').hidden = name !== 'admin';
+}
+
+function route() {
+  const h = location.hash;
+  if (h === '#client') showSection('store');
+  else if (h === '#editor') showSection(unlocked ? 'admin' : 'verify');
+  else showSection('home');
+}
+
+function priceHtml(p) {
+  if (p.price == null) return '';
+  if (p.discount != null && p.discount < p.price) {
+    return `<strong>₹${p.discount}</strong><s>₹${p.price}</s><span class="off">${Math.round((1 - p.discount / p.price) * 100)}% off</span>`;
+  }
+  return `<strong>₹${p.price}</strong>`;
+}
+
+function renderGrid() {
+  const q = query.trim().toLowerCase();
+  const list = prods.filter(p => !q || [p.name, p.type, p.description].join(' ').toLowerCase().includes(q));
+  $('grid').innerHTML = list.map(p => {
+    const img = safeImg(p.image);
+    return `<article class="card" data-id="${esc(p.id)}">${p.special ? '<span class="badge">Special</span>' : ''}${img ? `<img src="${img}" alt="">` : '<div class="noimg"></div>'}<div class="cb"><span class="tag">${esc(p.type || 'General')}</span><h3>${esc(p.name)}</h3><div class="price">${priceHtml(p)}</div></div></article>`;
+  }).join('');
+  const m = $('msg');
+  m.textContent = !prods.length ? 'No products yet.' : (list.length ? '' : 'No products match your search.');
+  m.hidden = list.length > 0;
+}
+
+function openProduct(id) {
+  const p = prods.find(x => x.id === id);
+  if (!p) return;
+  const img = safeImg(p.image);
+  $('dImg').src = img;
+  $('dImg').hidden = !img;
+  $('dType').textContent = p.type || 'General';
+  $('dName').textContent = p.name || '';
+  $('dDesc').textContent = p.description || '';
+  $('dPrice').innerHTML = `<div class="price">${priceHtml(p)}</div>`;
+  $('dVisit').href = normUrl(p.url) || '#';
+  showSection('detail');
+  window.scrollTo(0, 0);
+}
+
+function renderAdmin() {
+  $('count').textContent = `(${prods.length})`;
+  $('adminEmpty').hidden = prods.length > 0;
+  $('adminList').innerHTML = prods.map(p => {
+    const img = safeImg(p.image);
+    return `<div class="item">${img ? `<img class="thumb" src="${img}" alt="">` : '<div class="thumb"></div>'}<div class="info"><strong>${esc(p.name)}</strong> <span class="tag">${esc(p.type || 'General')}</span>${p.special ? ' <span class="tag" style="color:#f59e0b">Special</span>' : ''}<small>${esc(p.url)}</small></div><button class="btn small warn" data-del="${esc(p.id)}">Delete</button></div>`;
+  }).join('');
+}
+
+function readLocal() {
+  try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]'); } catch (e) { return []; }
+}
+function writeLocal(list) { localStorage.setItem(LOCAL_KEY, JSON.stringify(list)); }
+function loadLocal() {
+  prods = readLocal().sort(sortProducts);
+  renderGrid();
+  renderAdmin();
+}
+
+async function addProduct(item) {
+  if (productsRef) return productsRef.add(item);
+  const list = readLocal();
+  list.push({ id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), ...item });
+  writeLocal(list);
+  loadLocal();
+}
+
+async function removeProduct(id) {
+  if (productsRef) return productsRef.doc(id).delete();
+  writeLocal(readLocal().filter(p => p.id !== id));
+  loadLocal();
+}
+
+function subscribe() {
+  if (subscribed || !db) return;
+  subscribed = true;
+  productsRef = db.collection('products');
+  productsRef.onSnapshot(snap => {
+    prods = snap.docs.filter(d => d.exists)
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort(sortProducts);
+    renderGrid();
+    renderAdmin();
+  }, e => {
+    $('msg').textContent = 'Could not load products: ' + (e.message || e);
+    $('msg').hidden = false;
+  });
+}
+
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function checkPassword() {
+  $('pwErr').textContent = '';
+  try {
+    const h = await sha256($('pw').value.trim().toLowerCase());
+    if (h === PASS_HASH) {
+      unlocked = true;
+      $('pw').value = '';
+      location.hash = '#editor';
+      route();
+    } else {
+      $('pwErr').textContent = 'Wrong password. Type it in small letters.';
+    }
+  } catch (e) {
+    $('pwErr').textContent = 'This browser cannot check the password here.';
+  }
+}
+
+function compress(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onerror = () => reject(new Error('Could not read that photo.'));
+    img.onload = () => {
+      for (const [max, q] of [[800, 0.75], [640, 0.6], [480, 0.5]]) {
+        const s = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * s);
+        c.height = Math.round(img.height * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        const d = c.toDataURL('image/jpeg', q);
+        if (d.length <= 170000) return resolve(d);
+      }
+      reject(new Error('That photo is too large. Try a smaller one.'));
+    };
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+function openAdd() {
+  ['pName', 'pType', 'pUrl', 'pDesc', 'pPrice', 'pDisc'].forEach(i => $(i).value = '');
+  $('pImg').value = '';
+  $('pSpecial').checked = false;
+  $('pPrev').hidden = true;
+  $('pErr').textContent = '';
+  pendingFile = null;
+  $('modal').classList.add('open');
+  $('pName').focus();
+}
+function closeAdd() { $('modal').classList.remove('open'); }
+function setErr(t) { $('pErr').textContent = t; }
+
+async function init() {
+  const C = window.claude;
+  if (!C || !C.use) {
+    localMode = true;
+    $('localNote').hidden = false;
+    loadLocal();
+    route();
+    return;
+  }
+  try { db = await C.use('db'); }
+  catch (e) { console.error(e); db = null; }
+  if (db) subscribe();
+  else {
+    $('msg').innerHTML = signInLink;
+    $('adminEmpty').innerHTML = signInLink;
+  }
+  route();
+}
+
+$('pwBtn').onclick = checkPassword;
+$('pw').addEventListener('keydown', e => { if (e.key === 'Enter') checkPassword(); });
+$('lockBtn').onclick = () => { unlocked = false; location.hash = ''; route(); };
+$('grid').addEventListener('click', e => { const c = e.target.closest('[data-id]'); if (c) openProduct(c.dataset.id); });
+$('back').addEventListener('click', e => { e.preventDefault(); showSection('store'); });
+$('search').addEventListener('input', e => { query = e.target.value; renderGrid(); });
+window.addEventListener('hashchange', route);
+
+$('addBtn').onclick = openAdd;
+$('cancelBtn').onclick = closeAdd;
+$('modal').addEventListener('click', e => { if (e.target === $('modal')) closeAdd(); });
+
+$('pImg').onchange = () => {
+  const f = $('pImg').files[0] || null;
+  pendingFile = f;
+  if (f) { $('pPrev').src = URL.createObjectURL(f); $('pPrev').hidden = false; }
+  else $('pPrev').hidden = true;
+};
+
+$('saveBtn').onclick = async () => {
+  const name = $('pName').value.trim();
+  const url = normUrl($('pUrl').value);
+  if (!pendingFile) return setErr('Choose a photo.');
+  if (!name) return setErr('Enter a name.');
+  if (!url) return setErr('Enter a valid link (URL).');
+  if (!localMode && !productsRef) return setErr('Sign in to Claude to save products.');
+  $('saveBtn').disabled = true;
+  setErr('Saving…');
+  try {
+    const image = await compress(pendingFile);
+    await addProduct({
+      name,
+      type: $('pType').value.trim() || 'General',
+      description: $('pDesc').value.trim(),
+      url,
+      image,
+      special: $('pSpecial').checked,
+      price: num($('pPrice').value),
+      discount: num($('pDisc').value),
+      createdAt: Date.now()
+    });
+    closeAdd();
+  } catch (err) {
+    setErr('Could not save: ' + (err.message || err));
+  } finally {
+    $('saveBtn').disabled = false;
+  }
+};
+
+$('adminList').addEventListener('click', async e => {
+  const b = e.target.closest('[data-del]');
+  if (!b || (!localMode && !productsRef)) return;
+  if (!b.dataset.armed) {
+    b.dataset.armed = '1';
+    b.textContent = 'Tap again';
+    setTimeout(() => { delete b.dataset.armed; b.textContent = 'Delete'; }, 3000);
+    return;
+  }
+  b.disabled = true;
+  try { await removeProduct(b.dataset.del); }
+  catch (err) { b.disabled = false; b.textContent = 'Retry'; }
+});
+
+route();
+init();
+</script>
+</body>
+</html>

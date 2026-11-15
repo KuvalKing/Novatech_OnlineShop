@@ -101,12 +101,12 @@ textarea{min-height:90px;resize:vertical}
 
   <section id="verify" hidden>
     <div class="panel">
-      <strong style="font-size:18px">Editor sign-in</strong>
-      <p>We will email a sign-in link to the company account. Open the link in this same browser, then come back to this page.</p>
-      <button class="btn" id="sendLinkBtn">Email me a sign-in link</button>
+      <strong style="font-size:18px">Verify yourself</strong>
+      <p>Type the editor password to open the editor.</p>
+      <input id="pw" type="password" placeholder="Password" autocomplete="current-password" aria-label="Password">
+      <div class="err" id="pwErr"></div>
+      <button class="btn" id="pwBtn">Continue</button>
       <p class="hint" id="authMsg"></p>
-      <p class="err" id="notAllowed" hidden></p>
-      <button class="btn ghost" id="verifySignOut" hidden>Sign out</button>
     </div>
   </section>
 
@@ -133,7 +133,7 @@ textarea{min-height:90px;resize:vertical}
   <section id="admin" hidden>
     <div class="row between">
       <h2>Editor <span class="tag" id="count">(0)</span></h2>
-      <button class="btn small ghost" id="lockBtn">Sign out</button>
+      <button class="btn small ghost" id="lockBtn">Lock</button>
     </div>
     <div id="adminList" class="list"></div>
     <p class="msg" id="adminEmpty" hidden>No products yet. Tap + to add one.</p>
@@ -163,12 +163,12 @@ textarea{min-height:90px;resize:vertical}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// ============ SETUP: paste your two Supabase values between the quotes ============
+// ============ SETUP: your Supabase values (already filled in) ============
 const SUPABASE_URL = 'https://etgyzpcibczwdmrmvjax.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_6yaDhUDz7D8doibxOkzmHA__Z22ub0i';
-// The only account allowed to add or delete products.
+// The company account. Its password is set in Supabase, not in this file.
 const EDITOR_EMAIL = 'company.novatech14@gmail.com';
-// ==================================================================================
+// =========================================================================
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -310,33 +310,27 @@ async function removeProduct(id) {
   await loadProducts();
 }
 
-// ---------- Editor sign-in ----------
+// ---------- Editor sign-in (password) ----------
 
-function renderVerify() {
-  const signedIn = !!session;
-  $('sendLinkBtn').hidden = signedIn;
-  $('verifySignOut').hidden = !signedIn;
-  $('notAllowed').hidden = !(signedIn && !isEditor);
-  $('notAllowed').textContent = `The account ${editorEmailOf(session)} cannot edit products. Sign out and use the company account.`;
+function setPwErr(t) { $('pwErr').textContent = t; }
+
+async function signInWithPassword() {
+  if (!sb) return setPwErr('The database is not connected yet.');
+  const password = $('pw').value.trim().toLowerCase();
+  if (!password) return setPwErr('Type the editor password.');
+  $('pwBtn').disabled = true;
+  setPwErr('');
+  const { error } = await sb.auth.signInWithPassword({ email: EDITOR_EMAIL, password });
+  $('pwBtn').disabled = false;
+  if (error) return setPwErr('Wrong password, or the company account is not set up yet.');
+  $('pw').value = '';
+  setView('#editor');
 }
 
 async function applySession(s) {
   session = s;
   isEditor = editorEmailOf(s) === EDITOR_EMAIL.toLowerCase();
-  renderVerify();
   route();
-}
-
-async function sendSignInLink() {
-  if (!sb) return notice('The database is not connected yet.');
-  $('authMsg').textContent = 'Sending…';
-  const { error } = await sb.auth.signInWithOtp({
-    email: EDITOR_EMAIL,
-    options: { emailRedirectTo: location.origin + location.pathname }
-  });
-  $('authMsg').textContent = error
-    ? 'Could not send the link: ' + error.message
-    : 'Link sent to ' + EDITOR_EMAIL + '. Open it in this same browser.';
 }
 
 async function signOut() {
@@ -381,8 +375,8 @@ function setErr(t) { $('pErr').textContent = t; }
 
 // ---------- Wiring ----------
 
-$('sendLinkBtn').onclick = sendSignInLink;
-$('verifySignOut').onclick = signOut;
+$('pwBtn').onclick = signInWithPassword;
+$('pw').addEventListener('keydown', e => { if (e.key === 'Enter') signInWithPassword(); });
 $('lockBtn').onclick = signOut;
 $('grid').addEventListener('click', e => { const c = e.target.closest('[data-id]'); if (c) openProduct(c.dataset.id); });
 $('back').addEventListener('click', e => { e.preventDefault(); showSection('store'); });
@@ -403,7 +397,7 @@ $('pImg').onchange = () => {
 $('saveBtn').onclick = async () => {
   const name = $('pName').value.trim();
   const url = normUrl($('pUrl').value);
-  if (!isEditor) return setErr('Sign in with the company account first.');
+  if (!isEditor) return setErr('Sign in as the editor first.');
   if (!pendingFile) return setErr('Choose a photo.');
   if (!name) return setErr('Enter a name.');
   if (!url) return setErr('Enter a valid link (URL).');
@@ -445,11 +439,10 @@ $('adminList').addEventListener('click', async e => {
 
 function init() {
   route();
-  if (!configured) return notice('Setup needed: paste your Supabase URL and anon key at the top of this file.');
+  if (!configured) return notice('Setup needed: the Supabase values are missing from this file.');
   if (!sb) return notice('Could not load the database library. Check the internet connection and reload.');
   sb.auth.onAuthStateChange((event, s) => {
     applySession(s);
-    if (event === 'SIGNED_IN' && editorEmailOf(s) === EDITOR_EMAIL.toLowerCase()) setView('#editor');
   });
   loadProducts();
   listenForChanges();

@@ -45,6 +45,7 @@ h2{font-size:24px}
 .price s{color:#64748b;font-size:14px}
 .off{font-size:12px;color:#4ade80;font-weight:600}
 .msg{color:#94a3b8;text-align:center;padding:40px 12px;font-size:15px}
+.msg a,.note a{color:#22d3ee}
 .back{display:inline-block;color:#22d3ee;margin-bottom:22px;font-size:15px;text-decoration:none}
 .detail{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:36px;align-items:start}
 #dImg{width:100%;border-radius:14px;background:#0f172a;border:1px solid #1f2937}
@@ -73,8 +74,7 @@ input[type=checkbox]{width:18px;height:18px;padding:0}
 textarea{min-height:90px;resize:vertical}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .prev{width:100%;max-height:200px;object-fit:contain;border-radius:8px;background:#0f172a}
-.err{color:#f87171;font-size:13px;min-height:1em;margin:0}
-.hint{color:#94a3b8;font-size:14px;min-height:1em;margin:0}
+.err{color:#f87171;font-size:13px;min-height:1em}
 @media (max-width:760px){.detail{grid-template-columns:1fr}.two{grid-template-columns:1fr}}
 </style>
 </head>
@@ -106,7 +106,6 @@ textarea{min-height:90px;resize:vertical}
       <input id="pw" type="password" placeholder="Password" autocomplete="current-password" aria-label="Password">
       <div class="err" id="pwErr"></div>
       <button class="btn" id="pwBtn">Continue</button>
-      <p class="hint" id="authMsg"></p>
     </div>
   </section>
 
@@ -135,6 +134,7 @@ textarea{min-height:90px;resize:vertical}
       <h2>Editor <span class="tag" id="count">(0)</span></h2>
       <button class="btn small ghost" id="lockBtn">Lock</button>
     </div>
+    <p class="note" id="localNote" style="color:#94a3b8;font-size:13px;margin:0 0 14px" hidden>This copy saves products in this browser only. The published NovaTech link stores products for everyone.</p>
     <div id="adminList" class="list"></div>
     <p class="msg" id="adminEmpty" hidden>No products yet. Tap + to add one.</p>
   </section>
@@ -148,7 +148,7 @@ textarea{min-height:90px;resize:vertical}
     <label>Photo<input id="pImg" type="file" accept="image/*"></label>
     <img id="pPrev" class="prev" alt="" hidden>
     <label>Name<input id="pName" maxlength="120"></label>
-    <label>Type of product<input id="pType" placeholder="e.g. Finance, Food, Services" maxlength="60"></label>
+    <label>Type of product<input id="pType" placeholder="e.g. Finance, Food, Services"></label>
     <label>Link (URL)<input id="pUrl" placeholder="https://yourwebsite.com" inputmode="url"></label>
     <label>Description<textarea id="pDesc" maxlength="1000"></textarea></label>
     <div class="two">
@@ -161,15 +161,9 @@ textarea{min-height:90px;resize:vertical}
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// ============ SETUP: your Supabase values (already filled in) ============
-const SUPABASE_URL = 'https://etgyzpcibczwdmrmvjax.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_6yaDhUDz7D8doibxOkzmHA__Z22ub0i';
-// The company account. Its password is set in Supabase, not in this file.
-const EDITOR_EMAIL = 'company.novatech14@gmail.com';
-// =========================================================================
-
+const PASS_HASH = '30a0e201b3c95ca6c1ef63112450e1951c0982ffaafe749db3e6732fdd1ff388';
+const LOCAL_KEY = 'novatech-products';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeImg = s => /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(s || '') ? s : '';
@@ -181,21 +175,9 @@ const normUrl = u => {
 };
 const num = s => { const v = parseFloat(String(s).replace(/,/g, '')); return isFinite(v) && v >= 0 ? v : null; };
 const sortProducts = (a, b) => (Number(!!b.special) - Number(!!a.special)) || ((b.createdAt || 0) - (a.createdAt || 0));
-const editorEmailOf = s => ((s && s.user && s.user.email) || '').toLowerCase();
+const signInLink = 'Sign in to Claude: <a href="https://claude.ai/login" target="_blank" rel="noopener noreferrer">open sign-in</a>, then reload this page.';
 
-const configured = SUPABASE_URL.startsWith('https://') && !SUPABASE_ANON_KEY.startsWith('PASTE');
-let sb = null;
-try {
-  if (configured && window.supabase) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-} catch (e) { console.error(e); }
-
-let prods = [], query = '', pendingFile = null, session = null, isEditor = false;
-
-function notice(text) {
-  $('msg').textContent = text;
-  $('msg').hidden = false;
-  $('authMsg').textContent = text;
-}
+let db = null, productsRef = null, subscribed = false, prods = [], query = '', pendingFile = null, unlocked = false, localMode = false;
 
 function showSection(name) {
   ['home', 'store', 'detail', 'verify', 'admin'].forEach(s => { $(s).hidden = s !== name; });
@@ -203,23 +185,12 @@ function showSection(name) {
   $('addBtn').hidden = name !== 'admin';
 }
 
-function route(h = location.hash) {
+function route() {
+  const h = location.hash;
   if (h === '#client') showSection('store');
-  else if (h === '#editor') showSection(isEditor ? 'admin' : 'verify');
+  else if (h === '#editor') showSection(unlocked ? 'admin' : 'verify');
   else showSection('home');
 }
-
-function setView(h) {
-  try { history.replaceState(null, '', h === '#' ? location.pathname : h); } catch (e) {}
-  route(h);
-}
-
-document.addEventListener('click', e => {
-  const a = e.target.closest('a.pick, a.homebtn, a.brand');
-  if (!a) return;
-  e.preventDefault();
-  setView(a.getAttribute('href'));
-});
 
 function priceHtml(p) {
   if (p.price == null) return '';
@@ -265,80 +236,67 @@ function renderAdmin() {
   }).join('');
 }
 
-// ---------- Database ----------
-
-function fromRow(r) {
-  return {
-    id: r.id,
-    name: r.name,
-    type: r.type,
-    description: r.description,
-    url: r.url,
-    image: r.image,
-    special: !!r.special,
-    price: r.price == null ? null : Number(r.price),
-    discount: r.discount == null ? null : Number(r.discount),
-    createdAt: new Date(r.created_at).getTime() || 0
-  };
+function readLocal() {
+  try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]'); } catch (e) { return []; }
 }
-
-async function loadProducts() {
-  if (!sb) return;
-  const { data, error } = await sb.from('products').select('*');
-  if (error) return notice('Could not load products: ' + error.message);
-  prods = data.map(fromRow).sort(sortProducts);
+function writeLocal(list) { localStorage.setItem(LOCAL_KEY, JSON.stringify(list)); }
+function loadLocal() {
+  prods = readLocal().sort(sortProducts);
   renderGrid();
   renderAdmin();
 }
 
-function listenForChanges() {
-  sb.channel('products-live')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => loadProducts())
-    .subscribe();
-}
-
-async function addProduct(row) {
-  const { error } = await sb.from('products').insert(row);
-  if (error) throw error;
-  await loadProducts();
+async function addProduct(item) {
+  if (productsRef) return productsRef.add(item);
+  const list = readLocal();
+  list.push({ id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), ...item });
+  writeLocal(list);
+  loadLocal();
 }
 
 async function removeProduct(id) {
-  const { data, error } = await sb.from('products').delete().eq('id', id).select('id');
-  if (error) throw error;
-  if (!data || !data.length) throw new Error('Not allowed to delete this product.');
-  await loadProducts();
+  if (productsRef) return productsRef.doc(id).delete();
+  writeLocal(readLocal().filter(p => p.id !== id));
+  loadLocal();
 }
 
-// ---------- Editor sign-in (password) ----------
-
-function setPwErr(t) { $('pwErr').textContent = t; }
-
-async function signInWithPassword() {
-  if (!sb) return setPwErr('The database is not connected yet.');
-  const password = $('pw').value.trim().toLowerCase();
-  if (!password) return setPwErr('Type the editor password.');
-  $('pwBtn').disabled = true;
-  setPwErr('');
-  const { error } = await sb.auth.signInWithPassword({ email: EDITOR_EMAIL, password });
-  $('pwBtn').disabled = false;
-  if (error) return setPwErr('Wrong password, or the company account is not set up yet.');
-  $('pw').value = '';
-  setView('#editor');
+function subscribe() {
+  if (subscribed || !db) return;
+  subscribed = true;
+  productsRef = db.collection('products');
+  productsRef.onSnapshot(snap => {
+    prods = snap.docs.filter(d => d.exists)
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort(sortProducts);
+    renderGrid();
+    renderAdmin();
+  }, e => {
+    $('msg').textContent = 'Could not load products: ' + (e.message || e);
+    $('msg').hidden = false;
+  });
 }
 
-async function applySession(s) {
-  session = s;
-  isEditor = editorEmailOf(s) === EDITOR_EMAIL.toLowerCase();
-  route();
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-async function signOut() {
-  if (sb) await sb.auth.signOut();
-  setView('#');
+async function checkPassword() {
+  $('pwErr').textContent = '';
+  try {
+    const h = await sha256($('pw').value.trim().toLowerCase());
+    if (h === PASS_HASH) {
+      unlocked = true;
+      $('pw').value = '';
+      location.hash = '#editor';
+      route();
+    } else {
+      $('pwErr').textContent = 'Wrong password. Type it in small letters.';
+    }
+  } catch (e) {
+    $('pwErr').textContent = 'This browser cannot check the password here.';
+  }
 }
-
-// ---------- Add product form ----------
 
 function compress(file) {
   return new Promise((resolve, reject) => {
@@ -373,15 +331,32 @@ function openAdd() {
 function closeAdd() { $('modal').classList.remove('open'); }
 function setErr(t) { $('pErr').textContent = t; }
 
-// ---------- Wiring ----------
+async function init() {
+  const C = window.claude;
+  if (!C || !C.use) {
+    localMode = true;
+    $('localNote').hidden = false;
+    loadLocal();
+    route();
+    return;
+  }
+  try { db = await C.use('db'); }
+  catch (e) { console.error(e); db = null; }
+  if (db) subscribe();
+  else {
+    $('msg').innerHTML = signInLink;
+    $('adminEmpty').innerHTML = signInLink;
+  }
+  route();
+}
 
-$('pwBtn').onclick = signInWithPassword;
-$('pw').addEventListener('keydown', e => { if (e.key === 'Enter') signInWithPassword(); });
-$('lockBtn').onclick = signOut;
+$('pwBtn').onclick = checkPassword;
+$('pw').addEventListener('keydown', e => { if (e.key === 'Enter') checkPassword(); });
+$('lockBtn').onclick = () => { unlocked = false; location.hash = ''; route(); };
 $('grid').addEventListener('click', e => { const c = e.target.closest('[data-id]'); if (c) openProduct(c.dataset.id); });
 $('back').addEventListener('click', e => { e.preventDefault(); showSection('store'); });
 $('search').addEventListener('input', e => { query = e.target.value; renderGrid(); });
-window.addEventListener('hashchange', () => route());
+window.addEventListener('hashchange', route);
 
 $('addBtn').onclick = openAdd;
 $('cancelBtn').onclick = closeAdd;
@@ -397,10 +372,10 @@ $('pImg').onchange = () => {
 $('saveBtn').onclick = async () => {
   const name = $('pName').value.trim();
   const url = normUrl($('pUrl').value);
-  if (!isEditor) return setErr('Sign in as the editor first.');
   if (!pendingFile) return setErr('Choose a photo.');
   if (!name) return setErr('Enter a name.');
   if (!url) return setErr('Enter a valid link (URL).');
+  if (!localMode && !productsRef) return setErr('Sign in to Claude to save products.');
   $('saveBtn').disabled = true;
   setErr('Saving…');
   try {
@@ -413,7 +388,8 @@ $('saveBtn').onclick = async () => {
       image,
       special: $('pSpecial').checked,
       price: num($('pPrice').value),
-      discount: num($('pDisc').value)
+      discount: num($('pDisc').value),
+      createdAt: Date.now()
     });
     closeAdd();
   } catch (err) {
@@ -425,7 +401,7 @@ $('saveBtn').onclick = async () => {
 
 $('adminList').addEventListener('click', async e => {
   const b = e.target.closest('[data-del]');
-  if (!b || !isEditor) return;
+  if (!b || (!localMode && !productsRef)) return;
   if (!b.dataset.armed) {
     b.dataset.armed = '1';
     b.textContent = 'Tap again';
@@ -437,17 +413,7 @@ $('adminList').addEventListener('click', async e => {
   catch (err) { b.disabled = false; b.textContent = 'Retry'; }
 });
 
-function init() {
-  route();
-  if (!configured) return notice('Setup needed: the Supabase values are missing from this file.');
-  if (!sb) return notice('Could not load the database library. Check the internet connection and reload.');
-  sb.auth.onAuthStateChange((event, s) => {
-    applySession(s);
-  });
-  loadProducts();
-  listenForChanges();
-}
-
+route();
 init();
 </script>
 </body>
